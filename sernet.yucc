@@ -1,0 +1,589 @@
+/* -*- c -*- */
+#if !defined INCLUDED_yuck_h_
+#define INCLUDED_yuck_h_
+
+#include <stddef.h>
+
+#define YUCK_OPTARG_NONE	((void*)0x1U)
+
+enum yuck_cmds_e {
+	/* value used when no command was specified */
+	SERNET_CMD_NONE = 0U,
+
+	/* actual commands */
+	SERNET_CMD_ANALYZE,
+	
+	/* convenience identifiers */
+	YUCK_NOCMD = SERNET_CMD_NONE,
+	YUCK_NCMDS = SERNET_CMD_ANALYZE
+};
+
+
+
+typedef union yuck_u yuck_t;
+
+
+/* convenience structure for `analyze' */
+struct yuck_cmd_analyze_s {
+	enum yuck_cmds_e cmd;
+
+	/* left-over arguments, the command string is never a part of this */
+	size_t nargs;
+	char **args;
+
+	/* help is handled automatically */
+	/* version is handled automatically */
+	char *host_arg;
+	char *port_arg;
+	unsigned int broadcast_flag;
+	char *input_arg;
+	char *rate_arg;
+
+	char *output_arg;
+	char *size_arg;
+	char *delay_arg;
+	char *listen_arg;
+	unsigned int fork_flag;
+};
+
+
+union yuck_u {
+	/* generic struct */
+	struct {
+		enum yuck_cmds_e cmd;
+
+		/* left-over arguments,
+		 * the command string is never a part of this */
+		size_t nargs;
+		char **args;
+
+		/* slots common to all commands */
+		/* help is handled automatically */
+		/* version is handled automatically */
+		char *host_arg;
+		char *port_arg;
+		unsigned int broadcast_flag;
+		char *input_arg;
+		char *rate_arg;
+	};
+
+	/* depending on CMD at most one of the following structs is filled in
+	 * if CMD is YUCK_NONE no slots of this union must be accessed */
+	struct yuck_cmd_analyze_s analyze;
+};
+
+
+static __attribute__((nonnull(1))) int
+yuck_parse(yuck_t*, int argc, char *argv[]);
+static __attribute__((nonnull(1))) void yuck_free(yuck_t*);
+
+static __attribute__((nonnull(1))) void yuck_auto_help(const yuck_t*);
+static __attribute__((nonnull(1))) void yuck_auto_usage(const yuck_t*);
+static __attribute__((nonnull(1))) void yuck_auto_version(const yuck_t*);
+
+/* some hooks */
+#if defined yuck_post_help
+static __attribute__((nonnull(1))) void yuck_post_help(const yuck_t*);
+#endif	/* yuck_post_help */
+
+#if defined yuck_post_usage
+static __attribute__((nonnull(1))) void yuck_post_usage(const yuck_t*);
+#endif	/* yuck_post_usage */
+
+#if defined yuck_post_version
+static __attribute__((nonnull(1))) void yuck_post_version(const yuck_t*);
+#endif	/* yuck_post_version */
+
+#endif	/* INCLUDED_yuck_h_ */
+/* -*- c -*- */
+#if defined HAVE_CONFIG_H
+# include "config.h"
+#endif	/* HAVE_CONFIG_H */
+#if defined HAVE_VERSION_H
+# include "version.h"
+#endif	/* HAVE_VERSION_H */
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
+#include <limits.h>
+
+#if defined __INTEL_COMPILER
+# pragma warning (disable:177)
+# pragma warning (disable:111)
+#elif defined __GNUC__
+# if __GNUC__ > 4 || __GNUC__ == 4 &&  __GNUC_MINOR__ >= 6
+#  pragma GCC diagnostic push
+# endif	 /* GCC version */
+# pragma GCC diagnostic ignored "-Wunused-label"
+# pragma GCC diagnostic ignored "-Wunused-variable"
+# pragma GCC diagnostic ignored "-Wunused-function"
+#endif	/* __INTEL_COMPILER */
+
+
+static inline bool
+yuck_streqp(const char *s1, const char *s2)
+{
+	return !strcmp(s1, s2);
+}
+
+/* for multi-args */
+static inline char**
+yuck_append(char **array, size_t n, char *val)
+{
+	if (!(n % 16U)) {
+		/* resize */
+		array = realloc(array, (n + 16U) * sizeof(*array));
+		if (array == NULL) {
+			return NULL;
+		}
+	}
+	array[n] = val;
+	return array;
+}
+
+static enum yuck_cmds_e yuck_parse_cmd(const char *cmd)
+{
+	if (0) {
+		;
+	} else if (yuck_streqp(cmd, "analyze")) {
+		return SERNET_CMD_ANALYZE;
+	} else {
+		/* error here? */
+		fprintf(stderr, "sernet: invalid command `%s'\n\
+Try `--help' for a list of commands.\n", cmd);
+	}
+	return (enum yuck_cmds_e)-1;
+}
+
+
+static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
+{
+	char *op;
+	int i;
+
+	/* we'll have at most this many args */
+	memset(tgt, 0, sizeof(*tgt));
+	if ((tgt->args = calloc(argc, sizeof(*tgt->args))) == NULL) {
+		return -1;
+	}
+	for (i = 1; i < argc && tgt->nargs < (size_t)-1; i++) {
+		op = argv[i];
+
+		switch (*op) {
+		case '-':
+			/* could be an option */
+			switch (*++op) {
+			default:
+				/* could be glued into one */
+				for (; *op; op++) {
+					goto shortopt; back_from_shortopt:;
+				}
+				break;
+			case '-':
+				if (*++op == '\0') {
+					i++;
+					goto dashdash; back_from_dashdash:;
+					break;
+				}
+				goto longopt; back_from_longopt:;
+				break;
+			case '\0':
+				goto plain_dash;
+			}
+			break;
+		default:
+		plain_dash:
+			goto arg; back_from_arg:;
+			break;
+		}
+	}
+	if (i < argc) {
+		op = argv[i];
+
+		if (*op++ == '-' && *op++ == '-' && !*op) {
+			/* another dashdash, filter out */
+			i++;
+		}
+	}
+	/* has to be here as the max_pargs condition might drive us here */
+	dashdash:
+	{
+		/* dashdash loop, pile everything on tgt->args
+		 * don't check for subcommands either, this is in accordance to
+		 * the git tool which won't accept commands after -- */
+		for (; i < argc; i++) {
+			tgt->args[tgt->nargs++] = argv[i];
+		}
+	}
+	return 0;
+
+	longopt:
+	{
+		/* split into option and arg part */
+		char *arg;
+
+		if ((arg = strchr(op, '=')) != NULL) {
+			/* \nul this one out */
+			*arg++ = '\0';
+		}
+
+		switch (tgt->cmd) {
+		default:
+			goto SERNET_CMD_NONE_longopt; back_from_SERNET_CMD_NONE_longopt:;
+			break;
+		case SERNET_CMD_ANALYZE:
+			goto SERNET_CMD_ANALYZE_longopt; back_from_SERNET_CMD_ANALYZE_longopt:;
+			break;
+		}
+		goto back_from_longopt;
+
+
+		SERNET_CMD_NONE_longopt:
+		{
+			if (0) {
+				;
+			} else if (yuck_streqp(op, "help")) {
+				/* invoke auto action and exit */
+				yuck_auto_help(tgt);
+				goto success;
+			} else if (yuck_streqp(op, "version")) {
+				/* invoke auto action and exit */
+				yuck_auto_version(tgt);
+				goto success;
+			} else if (yuck_streqp(op, "host")) {
+				tgt->host_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "port")) {
+				tgt->port_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "broadcast")) {
+				tgt->broadcast_flag++;
+			} else if (yuck_streqp(op, "input")) {
+				tgt->input_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "rate")) {
+				tgt->rate_arg = arg ?: argv[++i];
+			} else {
+				/* grml */
+				fprintf(stderr, "sernet: unrecognized option `--%s'\n", op);
+				goto failure;
+			}
+			goto back_from_SERNET_CMD_NONE_longopt;
+		}
+		SERNET_CMD_ANALYZE_longopt:
+		{
+			if (0) {
+				;
+			} else if (yuck_streqp(op, "output")) {
+				tgt->analyze.output_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "size")) {
+				tgt->analyze.size_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "delay")) {
+				tgt->analyze.delay_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "listen")) {
+				tgt->analyze.listen_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "fork")) {
+				tgt->analyze.fork_flag++;
+			} else {
+				goto SERNET_CMD_NONE_longopt;
+			}
+			goto back_from_SERNET_CMD_ANALYZE_longopt;
+		}
+		
+	}
+
+	shortopt:
+	{
+		char *arg = op + 1U;
+
+		switch (tgt->cmd) {
+		default:
+			goto SERNET_CMD_NONE_shortopt; back_from_SERNET_CMD_NONE_shortopt:;
+			break;
+		case SERNET_CMD_ANALYZE:
+			goto SERNET_CMD_ANALYZE_shortopt; back_from_SERNET_CMD_ANALYZE_shortopt:;
+			break;
+		}
+		goto back_from_shortopt;
+
+
+		SERNET_CMD_NONE_shortopt:
+		{
+			switch (*op) {
+			default:
+				;
+				;
+				fprintf(stderr, "sernet: invalid option -%c\n", *op);
+				goto failure;
+
+
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				/* literal treatment of numeral */
+				goto arg;
+
+				
+			case '?':
+				/* invoke auto action and exit */
+				yuck_auto_help(tgt);
+				goto success;
+				break;
+			case 'V':
+				/* invoke auto action and exit */
+				yuck_auto_version(tgt);
+				goto success;
+				break;
+			case 'h':
+				tgt->host_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			case 'p':
+				tgt->port_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			case 'b':
+				tgt->broadcast_flag++;
+				break;
+			case 'i':
+				tgt->input_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			case 'r':
+				tgt->rate_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			}
+			goto back_from_SERNET_CMD_NONE_shortopt;
+		}
+		SERNET_CMD_ANALYZE_shortopt:
+		{
+			switch (*op) {
+			default:
+				;
+				;
+				goto SERNET_CMD_NONE_shortopt;
+
+				
+			case 'o':
+				tgt->analyze.output_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			case 's':
+				tgt->analyze.size_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			case 'd':
+				tgt->analyze.delay_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			case 'l':
+				tgt->analyze.listen_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			case 'f':
+				tgt->analyze.fork_flag++;
+				break;
+			}
+			goto back_from_SERNET_CMD_ANALYZE_shortopt;
+		}
+		
+	}
+
+	arg:
+	{
+		if (tgt->cmd || !YUCK_NCMDS) {
+			tgt->args[tgt->nargs++] = argv[i];
+		} else {
+			/* ah, might be an arg then */
+			if ((tgt->cmd = yuck_parse_cmd(op)) > YUCK_NCMDS) {
+				return -1;
+			}
+		}
+		goto back_from_arg;
+	}
+
+	failure:
+	{
+		exit(EXIT_FAILURE);
+	}
+
+	success:
+	{
+		exit(EXIT_SUCCESS);
+	}
+}
+
+static void yuck_free(yuck_t tgt[static 1U])
+{
+	if (tgt->args != NULL) {
+		/* free despite const qualifier */
+		free(tgt->args);
+	}
+	/* free mulargs */
+	switch (tgt->cmd) {
+		void *ptr;
+	default:
+		break;
+	case SERNET_CMD_NONE:
+;
+;
+;
+;
+;
+;
+;
+		break;
+	case SERNET_CMD_ANALYZE:
+;
+;
+;
+;
+;
+		break;
+		break;
+	}
+	return;
+}
+
+static void yuck_auto_usage(const yuck_t src[static 1U])
+{
+	switch (src->cmd) {
+	default:
+	YUCK_NOCMD:
+		puts("Usage: sernet [OPTION]... COMMAND\n\
+\n\
+Communicate between serial ports and networks.\n\
+");
+		break;
+
+	case SERNET_CMD_ANALYZE:
+		puts("Usage: sernet analyze [OPTION]...\n\
+\n\
+Perform timing analysis by triggering data via a secondary serial port and optionally a network receiver.\n\
+");
+		break;
+
+	}
+
+#if defined yuck_post_usage
+	yuck_post_usage(src);
+#endif	/* yuck_post_usage */
+	return;
+}
+
+static void yuck_auto_help(const yuck_t src[static 1U])
+{
+	yuck_auto_usage(src);
+
+	if (src->cmd == YUCK_NOCMD) {
+		/* also output a list of commands */
+		puts("COMMAND may be one of:\n\
+  analyze     Perform timing analysis by triggering data via a secondary serial port and optionally a network receiver.\n\
+");
+	}
+
+	/* leave a not about common options */
+	if (src->cmd == YUCK_NOCMD) {
+		puts("\
+Options accepted by all commands:");
+	} else {
+		puts("\
+Common options:\n\
+  -?, --help            display this help and exit\n\
+  -V, --version         output version information and exit\n\
+  -h, --host=ADDR       Remote host.\n\
+  -p, --port=PORT       Remote port or service.\n\
+  -b, --broadcast       Enable broadcast.\n\
+  -i, --input=FILE      Input serial device file.\n\
+  -r, --rate=RATE       Serial baud rate.\n\
+");
+	}
+
+	switch (src->cmd) {
+	default:
+	case SERNET_CMD_NONE:
+		puts("\
+  -?, --help            display this help and exit\n\
+  -V, --version         output version information and exit\n\
+  -h, --host=ADDR       Remote host.\n\
+  -p, --port=PORT       Remote port or service.\n\
+  -b, --broadcast       Enable broadcast.\n\
+  -i, --input=FILE      Input serial device file.\n\
+  -r, --rate=RATE       Serial baud rate.\n\
+");
+		break;
+
+	case SERNET_CMD_ANALYZE:
+		puts("\
+Command-specific options:\n\
+  -o, --output=FILE     Serial device file to write into.\n\
+  -s, --size=SIZE       Packet size per write.\n\
+  -d, --delay=MSEC      Delay between packets.\n\
+  -l, --listen=ADDR     Listen for packets at ADDR.\n\
+  -f, --fork            Fork the output and listen threads.\n\
+");
+		break;
+
+	}
+
+#if defined yuck_post_help
+	yuck_post_help(src);
+#endif	/* yuck_post_help */
+
+#if defined PACKAGE_BUGREPORT
+	puts("\n\
+Report bugs to " PACKAGE_BUGREPORT);
+#endif	/* PACKAGE_BUGREPORT */
+	return;
+}
+
+static void yuck_auto_version(const yuck_t src[static 1U])
+{
+	switch (src->cmd) {
+	default:
+#if 0
+
+#elif defined package_string
+		puts(package_string);
+#elif defined package_version
+		printf("sernet %s\n", package_version);
+#elif defined PACKAGE_STRING
+		puts(PACKAGE_STRING);
+#elif defined PACKAGE_VERSION
+		puts("sernet " PACKAGE_VERSION);
+#elif defined VERSION
+		puts("sernet " VERSION);
+#else  /* !PACKAGE_VERSION, !VERSION */
+		puts("sernet unknown version");
+#endif	/* PACKAGE_VERSION */
+		break;
+	}
+
+#if defined yuck_post_version
+	yuck_post_version(src);
+#endif	/* yuck_post_version */
+	return;
+}
+
+#if defined __INTEL_COMPILER
+# pragma warning (default:177)
+# pragma warning (default:111)
+#elif defined __GNUC__
+# if __GNUC__ > 4 || __GNUC__ == 4 &&  __GNUC_MINOR__ >= 6
+#  pragma GCC diagnostic pop
+# endif	 /* GCC version */
+#endif	/* __INTEL_COMPILER */

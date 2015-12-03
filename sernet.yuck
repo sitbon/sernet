@@ -1,0 +1,20 @@
+Usage: sernet
+
+Communicate between serial ports and networks.
+
+  -h, --host=ADDR      Remote host.
+  -p, --port=PORT      Remote port or service.
+  -b, --broadcast      Enable broadcast.
+  -i, --input=FILE     Input serial device file.
+  -r, --rate=RATE      Serial baud rate.
+
+
+Usage: sernet analyze
+
+Perform timing analysis by triggering data via a secondary serial port and optionally a network receiver.
+
+  -o, --output=FILE    Serial device file to write into.
+  -s, --size=SIZE      Packet size per write.
+  -d, --delay=MSEC     Delay between packets.
+  -l, --listen=ADDR    Listen for packets at ADDR.
+  -f, --fork           Fork the output and listen threads.
