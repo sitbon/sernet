@@ -6,9 +6,9 @@
 #include <unistd.h>
 #include <stdio.h>
 
-int udp_open(struct addrinfo *addr)
+int udp_open(int ai_family)
 {
-    const int fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+    const int fd = socket(ai_family, SOCK_DGRAM, IPPROTO_UDP);
 
     if (fd == -1) {
         perror("socket");
@@ -17,9 +17,9 @@ int udp_open(struct addrinfo *addr)
     return fd;
 }
 
-int udp_bind(int fd, struct addrinfo *addr)
+int udp_bind(int fd, struct sockaddr *addr, socklen_t addr_len)
 {
-    if (bind(fd, addr->ai_addr, addr->ai_addrlen) == -1) {
+    if (bind(fd, addr, addr_len) == -1) {
         perror("bind");
         return -1;
     }
@@ -53,9 +53,9 @@ int udp_addr(struct addrinfo **addr, const char *host, const char *service, bool
     return err;
 }
 
-int udp_send(int fd, struct addrinfo *addr, const void *buf, size_t len)
+int udp_send(int fd, struct sockaddr *addr, socklen_t addr_len, const void *buf, size_t len)
 {
-    const ssize_t res = sendto(fd, buf, len, MSG_NOSIGNAL, addr->ai_addr, addr->ai_addrlen);
+    const ssize_t res = sendto(fd, buf, len, MSG_NOSIGNAL, addr, addr_len);
 
     if (res == -1) {
         fprintf(stderr, "sendto: %s\n", strerror(errno));
@@ -64,16 +64,25 @@ int udp_send(int fd, struct addrinfo *addr, const void *buf, size_t len)
     return (int)res;
 }
 
-int udp_recv(int fd, struct sockaddr_in *addr, void *buf, size_t len)
+int udp_recv(int fd, struct sockaddr *addr, socklen_t *addr_len, void *buf, size_t len)
 {
-    socklen_t addr_len = sizeof(struct sockaddr_in);
-    const ssize_t res = recvfrom(fd, buf, len, MSG_NOSIGNAL | MSG_WAITALL, (struct sockaddr *)addr, &addr_len);
+    const ssize_t res = recvfrom(fd, buf, len, MSG_NOSIGNAL | MSG_WAITALL, addr, addr_len);
 
     if (res == -1) {
         fprintf(stderr, "recvfrom: %s\n", strerror(errno));
     }
 
     return (int)res;
+}
+
+struct sockaddr_in *addr_inet_sockaddr(struct addrinfo *addr)
+{
+    switch (addr->ai_family) {
+        case AF_INET:
+            return (struct sockaddr_in *)addr->ai_addr;
+        default:
+            return NULL;
+    }
 }
 
 in_port_t addr_inet_port(struct addrinfo *addr)

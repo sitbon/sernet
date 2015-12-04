@@ -11,11 +11,12 @@ enum yuck_cmds_e {
 	SERNET_CMD_NONE = 0U,
 
 	/* actual commands */
-	SERNET_CMD_ANALYZE,
+	SERNET_CMD_FWD,
+	SERNET_CMD_SRC,
 	
 	/* convenience identifiers */
 	YUCK_NOCMD = SERNET_CMD_NONE,
-	YUCK_NCMDS = SERNET_CMD_ANALYZE
+	YUCK_NCMDS = SERNET_CMD_SRC
 };
 
 
@@ -23,8 +24,8 @@ enum yuck_cmds_e {
 typedef union yuck_u yuck_t;
 
 
-/* convenience structure for `analyze' */
-struct yuck_cmd_analyze_s {
+/* convenience structure for `fwd' */
+struct yuck_cmd_fwd_s {
 	enum yuck_cmds_e cmd;
 
 	/* left-over arguments, the command string is never a part of this */
@@ -33,17 +34,28 @@ struct yuck_cmd_analyze_s {
 
 	/* help is handled automatically */
 	/* version is handled automatically */
-	char *host_arg;
-	char *port_arg;
-	unsigned int broadcast_flag;
+	char *rate_arg;
+
 	char *input_arg;
+};
+
+/* convenience structure for `src' */
+struct yuck_cmd_src_s {
+	enum yuck_cmds_e cmd;
+
+	/* left-over arguments, the command string is never a part of this */
+	size_t nargs;
+	char **args;
+
+	/* help is handled automatically */
+	/* version is handled automatically */
 	char *rate_arg;
 
 	char *output_arg;
 	char *size_arg;
 	char *delay_arg;
 	char *listen_arg;
-	unsigned int fork_flag;
+	char *port_arg;
 };
 
 
@@ -60,16 +72,13 @@ union yuck_u {
 		/* slots common to all commands */
 		/* help is handled automatically */
 		/* version is handled automatically */
-		char *host_arg;
-		char *port_arg;
-		unsigned int broadcast_flag;
-		char *input_arg;
 		char *rate_arg;
 	};
 
 	/* depending on CMD at most one of the following structs is filled in
 	 * if CMD is YUCK_NONE no slots of this union must be accessed */
-	struct yuck_cmd_analyze_s analyze;
+	struct yuck_cmd_fwd_s fwd;
+	struct yuck_cmd_src_s src;
 };
 
 
@@ -146,8 +155,10 @@ static enum yuck_cmds_e yuck_parse_cmd(const char *cmd)
 {
 	if (0) {
 		;
-	} else if (yuck_streqp(cmd, "analyze")) {
-		return SERNET_CMD_ANALYZE;
+	} else if (yuck_streqp(cmd, "fwd")) {
+		return SERNET_CMD_FWD;
+	} else if (yuck_streqp(cmd, "src")) {
+		return SERNET_CMD_SRC;
 	} else {
 		/* error here? */
 		fprintf(stderr, "sernet: invalid command `%s'\n\
@@ -232,8 +243,11 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 		default:
 			goto SERNET_CMD_NONE_longopt; back_from_SERNET_CMD_NONE_longopt:;
 			break;
-		case SERNET_CMD_ANALYZE:
-			goto SERNET_CMD_ANALYZE_longopt; back_from_SERNET_CMD_ANALYZE_longopt:;
+		case SERNET_CMD_FWD:
+			goto SERNET_CMD_FWD_longopt; back_from_SERNET_CMD_FWD_longopt:;
+			break;
+		case SERNET_CMD_SRC:
+			goto SERNET_CMD_SRC_longopt; back_from_SERNET_CMD_SRC_longopt:;
 			break;
 		}
 		goto back_from_longopt;
@@ -251,14 +265,6 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				/* invoke auto action and exit */
 				yuck_auto_version(tgt);
 				goto success;
-			} else if (yuck_streqp(op, "host")) {
-				tgt->host_arg = arg ?: argv[++i];
-			} else if (yuck_streqp(op, "port")) {
-				tgt->port_arg = arg ?: argv[++i];
-			} else if (yuck_streqp(op, "broadcast")) {
-				tgt->broadcast_flag++;
-			} else if (yuck_streqp(op, "input")) {
-				tgt->input_arg = arg ?: argv[++i];
 			} else if (yuck_streqp(op, "rate")) {
 				tgt->rate_arg = arg ?: argv[++i];
 			} else {
@@ -268,24 +274,35 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 			}
 			goto back_from_SERNET_CMD_NONE_longopt;
 		}
-		SERNET_CMD_ANALYZE_longopt:
+		SERNET_CMD_FWD_longopt:
+		{
+			if (0) {
+				;
+			} else if (yuck_streqp(op, "input")) {
+				tgt->fwd.input_arg = arg ?: argv[++i];
+			} else {
+				goto SERNET_CMD_NONE_longopt;
+			}
+			goto back_from_SERNET_CMD_FWD_longopt;
+		}
+		SERNET_CMD_SRC_longopt:
 		{
 			if (0) {
 				;
 			} else if (yuck_streqp(op, "output")) {
-				tgt->analyze.output_arg = arg ?: argv[++i];
+				tgt->src.output_arg = arg ?: argv[++i];
 			} else if (yuck_streqp(op, "size")) {
-				tgt->analyze.size_arg = arg ?: argv[++i];
+				tgt->src.size_arg = arg ?: argv[++i];
 			} else if (yuck_streqp(op, "delay")) {
-				tgt->analyze.delay_arg = arg ?: argv[++i];
+				tgt->src.delay_arg = arg ?: argv[++i];
 			} else if (yuck_streqp(op, "listen")) {
-				tgt->analyze.listen_arg = arg ?: argv[++i];
-			} else if (yuck_streqp(op, "fork")) {
-				tgt->analyze.fork_flag++;
+				tgt->src.listen_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "port")) {
+				tgt->src.port_arg = arg ?: argv[++i];
 			} else {
 				goto SERNET_CMD_NONE_longopt;
 			}
-			goto back_from_SERNET_CMD_ANALYZE_longopt;
+			goto back_from_SERNET_CMD_SRC_longopt;
 		}
 		
 	}
@@ -298,8 +315,11 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 		default:
 			goto SERNET_CMD_NONE_shortopt; back_from_SERNET_CMD_NONE_shortopt:;
 			break;
-		case SERNET_CMD_ANALYZE:
-			goto SERNET_CMD_ANALYZE_shortopt; back_from_SERNET_CMD_ANALYZE_shortopt:;
+		case SERNET_CMD_FWD:
+			goto SERNET_CMD_FWD_shortopt; back_from_SERNET_CMD_FWD_shortopt:;
+			break;
+		case SERNET_CMD_SRC:
+			goto SERNET_CMD_SRC_shortopt; back_from_SERNET_CMD_SRC_shortopt:;
 			break;
 		}
 		goto back_from_shortopt;
@@ -339,24 +359,6 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				yuck_auto_version(tgt);
 				goto success;
 				break;
-			case 'h':
-				tgt->host_arg = *arg
-					? (op += strlen(arg), arg)
-					: argv[++i];
-				break;
-			case 'p':
-				tgt->port_arg = *arg
-					? (op += strlen(arg), arg)
-					: argv[++i];
-				break;
-			case 'b':
-				tgt->broadcast_flag++;
-				break;
-			case 'i':
-				tgt->input_arg = *arg
-					? (op += strlen(arg), arg)
-					: argv[++i];
-				break;
 			case 'r':
 				tgt->rate_arg = *arg
 					? (op += strlen(arg), arg)
@@ -365,7 +367,24 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 			}
 			goto back_from_SERNET_CMD_NONE_shortopt;
 		}
-		SERNET_CMD_ANALYZE_shortopt:
+		SERNET_CMD_FWD_shortopt:
+		{
+			switch (*op) {
+			default:
+				;
+				;
+				goto SERNET_CMD_NONE_shortopt;
+
+				
+			case 'i':
+				tgt->fwd.input_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			}
+			goto back_from_SERNET_CMD_FWD_shortopt;
+		}
+		SERNET_CMD_SRC_shortopt:
 		{
 			switch (*op) {
 			default:
@@ -375,30 +394,32 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 
 				
 			case 'o':
-				tgt->analyze.output_arg = *arg
+				tgt->src.output_arg = *arg
 					? (op += strlen(arg), arg)
 					: argv[++i];
 				break;
 			case 's':
-				tgt->analyze.size_arg = *arg
+				tgt->src.size_arg = *arg
 					? (op += strlen(arg), arg)
 					: argv[++i];
 				break;
 			case 'd':
-				tgt->analyze.delay_arg = *arg
+				tgt->src.delay_arg = *arg
 					? (op += strlen(arg), arg)
 					: argv[++i];
 				break;
 			case 'l':
-				tgt->analyze.listen_arg = *arg
+				tgt->src.listen_arg = *arg
 					? (op += strlen(arg), arg)
 					: argv[++i];
 				break;
-			case 'f':
-				tgt->analyze.fork_flag++;
+			case 'p':
+				tgt->src.port_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
 				break;
 			}
-			goto back_from_SERNET_CMD_ANALYZE_shortopt;
+			goto back_from_SERNET_CMD_SRC_shortopt;
 		}
 		
 	}
@@ -442,12 +463,11 @@ static void yuck_free(yuck_t tgt[static 1U])
 ;
 ;
 ;
-;
-;
-;
+		break;
+	case SERNET_CMD_FWD:
 ;
 		break;
-	case SERNET_CMD_ANALYZE:
+	case SERNET_CMD_SRC:
 ;
 ;
 ;
@@ -465,15 +485,20 @@ static void yuck_auto_usage(const yuck_t src[static 1U])
 	default:
 	YUCK_NOCMD:
 		puts("Usage: sernet [OPTION]... COMMAND\n\
-\n\
-Communicate between serial ports and networks.\n\
 ");
 		break;
 
-	case SERNET_CMD_ANALYZE:
-		puts("Usage: sernet analyze [OPTION]...\n\
+	case SERNET_CMD_FWD:
+		puts("Usage: sernet fwd [OPTION]...\n\
 \n\
-Perform timing analysis by triggering data via a secondary serial port and optionally a network receiver.\n\
+Forward from serial port to network.\n\
+");
+		break;
+
+	case SERNET_CMD_SRC:
+		puts("Usage: sernet src [OPTION]...\n\
+\n\
+Send packets on serial port and time network response.\n\
 ");
 		break;
 
@@ -492,7 +517,8 @@ static void yuck_auto_help(const yuck_t src[static 1U])
 	if (src->cmd == YUCK_NOCMD) {
 		/* also output a list of commands */
 		puts("COMMAND may be one of:\n\
-  analyze     Perform timing analysis by triggering data via a secondary serial port and optionally a network receiver.\n\
+  fwd         Forward from serial port to network.\n\
+  src         Send packets on serial port and time network response.\n\
 ");
 	}
 
@@ -505,10 +531,6 @@ Options accepted by all commands:");
 Common options:\n\
   -?, --help            display this help and exit\n\
   -V, --version         output version information and exit\n\
-  -h, --host=ADDR       Remote host.\n\
-  -p, --port=PORT       Remote port or service.\n\
-  -b, --broadcast       Enable broadcast.\n\
-  -i, --input=FILE      Input serial device file.\n\
   -r, --rate=RATE       Serial baud rate.\n\
 ");
 	}
@@ -519,22 +541,25 @@ Common options:\n\
 		puts("\
   -?, --help            display this help and exit\n\
   -V, --version         output version information and exit\n\
-  -h, --host=ADDR       Remote host.\n\
-  -p, --port=PORT       Remote port or service.\n\
-  -b, --broadcast       Enable broadcast.\n\
-  -i, --input=FILE      Input serial device file.\n\
   -r, --rate=RATE       Serial baud rate.\n\
 ");
 		break;
 
-	case SERNET_CMD_ANALYZE:
+	case SERNET_CMD_FWD:
+		puts("\
+Command-specific options:\n\
+  -i, --input=FILE      Input serial device file.\n\
+");
+		break;
+
+	case SERNET_CMD_SRC:
 		puts("\
 Command-specific options:\n\
   -o, --output=FILE     Serial device file to write into.\n\
   -s, --size=SIZE       Packet size per write.\n\
   -d, --delay=MSEC      Delay between packets.\n\
-  -l, --listen=ADDR     Listen for packets at ADDR.\n\
-  -f, --fork            Fork the output and listen threads.\n\
+  -l, --listen=IFACE    Listen on interface IFACE.\n\
+  -p, --port=PORT       Listen on port PORT.\n\
 ");
 		break;
 
