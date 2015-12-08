@@ -4,7 +4,9 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <time.h>
+#include <pthread.h>
 
 #define UART_MAX_LEN 2048
 
@@ -18,6 +20,9 @@ typedef int32_t     s32;
 typedef uint32_t    u32;
 typedef int64_t     s64;
 typedef uint64_t    u64;
+
+typedef u8          seq_t;
+typedef u8          buf_t;
 
 
 static inline void ts_diff(struct timespec *dst, struct timespec *a, struct timespec *b)
@@ -40,6 +45,20 @@ static inline void ts_add(struct timespec *dst, struct timespec *a, struct times
         dst->tv_sec++;
         dst->tv_nsec -= 1000000000;
     }
+}
+
+static inline void print_hex(FILE *fd, u8 *buf, u32 len)
+{
+    for (int i = 0; i < len; i++) printf("%02x ", buf[i]);
+    if (len) fputc('\n', fd);
+}
+
+static inline void set_thread_prio(bool max)
+{
+    struct sched_param sched = { .sched_priority = sched_get_priority_max(SCHED_FIFO) };
+    if (!max) sched.sched_priority--;
+    sched_setscheduler(0, SCHED_FIFO, &sched);
+    pthread_setschedparam(pthread_self(), SCHED_FIFO, &sched);
 }
 
 #endif

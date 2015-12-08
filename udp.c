@@ -55,7 +55,7 @@ int udp_addr(struct addrinfo **addr, const char *host, const char *service, bool
 
 int udp_send(int fd, struct sockaddr *addr, socklen_t addr_len, const void *buf, size_t len)
 {
-    const ssize_t res = sendto(fd, buf, len, MSG_NOSIGNAL, addr, addr_len);
+    const ssize_t res = sendto(fd, buf, len, MSG_NOSIGNAL | MSG_WAITALL, addr, addr_len);
 
     if (res == -1) {
         fprintf(stderr, "sendto: %s\n", strerror(errno));

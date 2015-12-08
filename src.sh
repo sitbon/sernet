@@ -10,7 +10,7 @@ stdio_labels=0
 cmds=(
     "-o /dev/ttyUSB0"
     "-o /dev/ttyUSB1"
-    "-o /dev/ttyUSB2"
+#    "-o /dev/ttyUSB2"
 )
 
 function write_fifos_wait() {

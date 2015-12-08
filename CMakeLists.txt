@@ -4,6 +4,6 @@ project(sernet C)
 set(CMAKE_C_COMPILER gcc)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -D__USE_POSIX199309")
 
-set(SOURCE_FILES main.c relay.c serial.c udp.c)
+set(SOURCE_FILES main.c fwd.c dst.c src.c packet.c serial.c udp.c)
 add_executable(sernet ${SOURCE_FILES})
 target_link_libraries(sernet -lrt -lpthread)

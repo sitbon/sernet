@@ -1,6 +1,7 @@
 Usage: sernet
 
   -r, --rate=RATE      Serial baud rate.
+  -p, --port=PORT      Connect or listen on port PORT.
 
 
 Usage: sernet fwd
@@ -8,6 +9,14 @@ Usage: sernet fwd
 Forward from serial port to network.
 
   -i, --input=FILE     Input serial device file.
+  -h, --host=HOST      Remote host to forward to.
+
+
+Usage: sernet dst
+
+Collect packets from network, filter, and send over unix socket.
+
+  -S, --sock=SOCKET    UNIX socket name.
 
 
 Usage: sernet src
@@ -18,4 +27,3 @@ Send packets on serial port and time network response.
   -s, --size=SIZE      Packet size per write.
   -d, --delay=MSEC     Delay between packets.
   -l, --listen=IFACE   Listen on interface IFACE.
-  -p, --port=PORT      Listen on port PORT.

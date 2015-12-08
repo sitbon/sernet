@@ -9,4 +9,4 @@ parallel-rsync --outdir out --errdir out -h"$d/hosts" -x"--recursive --perms --t
 
 echo 'Compiling...' >&2
 
-parallel-ssh --outdir out --errdir out -h"$d/hosts" "cd $b/ && mkdir -p build && cd build && cmake .. && make"
+parallel-ssh --outdir out --errdir out -h"$d/hosts" "cd $b/ && mkdir -p build && cd build && cmake .. && make clean && make"

@@ -12,6 +12,7 @@ enum yuck_cmds_e {
 
 	/* actual commands */
 	SERNET_CMD_FWD,
+	SERNET_CMD_DST,
 	SERNET_CMD_SRC,
 	
 	/* convenience identifiers */
@@ -35,8 +36,26 @@ struct yuck_cmd_fwd_s {
 	/* help is handled automatically */
 	/* version is handled automatically */
 	char *rate_arg;
+	char *port_arg;
 
 	char *input_arg;
+	char *host_arg;
+};
+
+/* convenience structure for `dst' */
+struct yuck_cmd_dst_s {
+	enum yuck_cmds_e cmd;
+
+	/* left-over arguments, the command string is never a part of this */
+	size_t nargs;
+	char **args;
+
+	/* help is handled automatically */
+	/* version is handled automatically */
+	char *rate_arg;
+	char *port_arg;
+
+	char *sock_arg;
 };
 
 /* convenience structure for `src' */
@@ -50,12 +69,12 @@ struct yuck_cmd_src_s {
 	/* help is handled automatically */
 	/* version is handled automatically */
 	char *rate_arg;
+	char *port_arg;
 
 	char *output_arg;
 	char *size_arg;
 	char *delay_arg;
 	char *listen_arg;
-	char *port_arg;
 };
 
 
@@ -73,11 +92,13 @@ union yuck_u {
 		/* help is handled automatically */
 		/* version is handled automatically */
 		char *rate_arg;
+		char *port_arg;
 	};
 
 	/* depending on CMD at most one of the following structs is filled in
 	 * if CMD is YUCK_NONE no slots of this union must be accessed */
 	struct yuck_cmd_fwd_s fwd;
+	struct yuck_cmd_dst_s dst;
 	struct yuck_cmd_src_s src;
 };
 
@@ -157,6 +178,8 @@ static enum yuck_cmds_e yuck_parse_cmd(const char *cmd)
 		;
 	} else if (yuck_streqp(cmd, "fwd")) {
 		return SERNET_CMD_FWD;
+	} else if (yuck_streqp(cmd, "dst")) {
+		return SERNET_CMD_DST;
 	} else if (yuck_streqp(cmd, "src")) {
 		return SERNET_CMD_SRC;
 	} else {
@@ -246,6 +269,9 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 		case SERNET_CMD_FWD:
 			goto SERNET_CMD_FWD_longopt; back_from_SERNET_CMD_FWD_longopt:;
 			break;
+		case SERNET_CMD_DST:
+			goto SERNET_CMD_DST_longopt; back_from_SERNET_CMD_DST_longopt:;
+			break;
 		case SERNET_CMD_SRC:
 			goto SERNET_CMD_SRC_longopt; back_from_SERNET_CMD_SRC_longopt:;
 			break;
@@ -267,6 +293,8 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				goto success;
 			} else if (yuck_streqp(op, "rate")) {
 				tgt->rate_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "port")) {
+				tgt->port_arg = arg ?: argv[++i];
 			} else {
 				/* grml */
 				fprintf(stderr, "sernet: unrecognized option `--%s'\n", op);
@@ -280,10 +308,23 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				;
 			} else if (yuck_streqp(op, "input")) {
 				tgt->fwd.input_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "host")) {
+				tgt->fwd.host_arg = arg ?: argv[++i];
 			} else {
 				goto SERNET_CMD_NONE_longopt;
 			}
 			goto back_from_SERNET_CMD_FWD_longopt;
+		}
+		SERNET_CMD_DST_longopt:
+		{
+			if (0) {
+				;
+			} else if (yuck_streqp(op, "sock")) {
+				tgt->dst.sock_arg = arg ?: argv[++i];
+			} else {
+				goto SERNET_CMD_NONE_longopt;
+			}
+			goto back_from_SERNET_CMD_DST_longopt;
 		}
 		SERNET_CMD_SRC_longopt:
 		{
@@ -297,8 +338,6 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				tgt->src.delay_arg = arg ?: argv[++i];
 			} else if (yuck_streqp(op, "listen")) {
 				tgt->src.listen_arg = arg ?: argv[++i];
-			} else if (yuck_streqp(op, "port")) {
-				tgt->src.port_arg = arg ?: argv[++i];
 			} else {
 				goto SERNET_CMD_NONE_longopt;
 			}
@@ -317,6 +356,9 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 			break;
 		case SERNET_CMD_FWD:
 			goto SERNET_CMD_FWD_shortopt; back_from_SERNET_CMD_FWD_shortopt:;
+			break;
+		case SERNET_CMD_DST:
+			goto SERNET_CMD_DST_shortopt; back_from_SERNET_CMD_DST_shortopt:;
 			break;
 		case SERNET_CMD_SRC:
 			goto SERNET_CMD_SRC_shortopt; back_from_SERNET_CMD_SRC_shortopt:;
@@ -364,6 +406,11 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 					? (op += strlen(arg), arg)
 					: argv[++i];
 				break;
+			case 'p':
+				tgt->port_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
 			}
 			goto back_from_SERNET_CMD_NONE_shortopt;
 		}
@@ -381,8 +428,30 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 					? (op += strlen(arg), arg)
 					: argv[++i];
 				break;
+			case 'h':
+				tgt->fwd.host_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
 			}
 			goto back_from_SERNET_CMD_FWD_shortopt;
+		}
+		SERNET_CMD_DST_shortopt:
+		{
+			switch (*op) {
+			default:
+				;
+				;
+				goto SERNET_CMD_NONE_shortopt;
+
+				
+			case 'S':
+				tgt->dst.sock_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			}
+			goto back_from_SERNET_CMD_DST_shortopt;
 		}
 		SERNET_CMD_SRC_shortopt:
 		{
@@ -410,11 +479,6 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				break;
 			case 'l':
 				tgt->src.listen_arg = *arg
-					? (op += strlen(arg), arg)
-					: argv[++i];
-				break;
-			case 'p':
-				tgt->src.port_arg = *arg
 					? (op += strlen(arg), arg)
 					: argv[++i];
 				break;
@@ -463,12 +527,16 @@ static void yuck_free(yuck_t tgt[static 1U])
 ;
 ;
 ;
+;
 		break;
 	case SERNET_CMD_FWD:
 ;
+;
+		break;
+	case SERNET_CMD_DST:
+;
 		break;
 	case SERNET_CMD_SRC:
-;
 ;
 ;
 ;
@@ -495,6 +563,13 @@ Forward from serial port to network.\n\
 ");
 		break;
 
+	case SERNET_CMD_DST:
+		puts("Usage: sernet dst [OPTION]...\n\
+\n\
+Collect packets from network, filter, and send over unix socket.\n\
+");
+		break;
+
 	case SERNET_CMD_SRC:
 		puts("Usage: sernet src [OPTION]...\n\
 \n\
@@ -518,6 +593,7 @@ static void yuck_auto_help(const yuck_t src[static 1U])
 		/* also output a list of commands */
 		puts("COMMAND may be one of:\n\
   fwd         Forward from serial port to network.\n\
+  dst         Collect packets from network, filter, and send over unix socket.\n\
   src         Send packets on serial port and time network response.\n\
 ");
 	}
@@ -532,6 +608,7 @@ Common options:\n\
   -?, --help            display this help and exit\n\
   -V, --version         output version information and exit\n\
   -r, --rate=RATE       Serial baud rate.\n\
+  -p, --port=PORT       Connect or listen on port PORT.\n\
 ");
 	}
 
@@ -542,6 +619,7 @@ Common options:\n\
   -?, --help            display this help and exit\n\
   -V, --version         output version information and exit\n\
   -r, --rate=RATE       Serial baud rate.\n\
+  -p, --port=PORT       Connect or listen on port PORT.\n\
 ");
 		break;
 
@@ -549,6 +627,14 @@ Common options:\n\
 		puts("\
 Command-specific options:\n\
   -i, --input=FILE      Input serial device file.\n\
+  -h, --host=HOST       Remote host to forward to.\n\
+");
+		break;
+
+	case SERNET_CMD_DST:
+		puts("\
+Command-specific options:\n\
+  -S, --sock=SOCKET     UNIX socket name.\n\
 ");
 		break;
 
@@ -559,7 +645,6 @@ Command-specific options:\n\
   -s, --size=SIZE       Packet size per write.\n\
   -d, --delay=MSEC      Delay between packets.\n\
   -l, --listen=IFACE    Listen on interface IFACE.\n\
-  -p, --port=PORT       Listen on port PORT.\n\
 ");
 		break;
 

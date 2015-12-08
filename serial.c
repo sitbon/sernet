@@ -112,6 +112,7 @@ int serial_setup(int fd, speed_t speed, int parity, int wait_time)
     tty.c_cflag &= ~CSTOPB;
     tty.c_cflag &= ~CRTSCTS;
 
+    cfmakeraw(&tty);
     tcflush(fd, TCIFLUSH | TCOFLUSH);
 
     if (tcsetattr(fd, TCSANOW, &tty) != 0)
