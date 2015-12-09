@@ -99,7 +99,7 @@ static void *src_tx_thread(void *param)
 
             len += wlen;
         } while (len < pkt_len);
-        putchar('-'); fflush(stdout);
+        //putchar('-'); fflush(stdout);
         //read(fd, buf, UART_MAX_LEN*2);
 #else
         pkt_len = sizeof(relay_pkt_data_t);

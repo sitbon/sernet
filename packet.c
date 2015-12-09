@@ -1,6 +1,9 @@
 #include "local.h"
 #include "packet.h"
+
 #include <stdio.h>
+#include <string.h>
+
 
 #define FRAME_BYTE_SYNC               (u8)0x7e
 #define FRAME_BYTE_ESC                (u8)0x7d
@@ -22,8 +25,21 @@ static pkt_len_t frame_decode(const buf_t *src, buf_t *dst, pkt_len_t *len)
     *len = 0;
 
     if (slen < FRAME_LEN_MIN) goto done;
-    if (*src != FRAME_BYTE_SYNC) { fputs("packet stream out of sync", stderr); goto fail; }
+    if (*src != FRAME_BYTE_SYNC) {
+        for (i = 1; i < slen; i++) {
+            if (src[i] == FRAME_BYTE_SYNC) {
+                slen -= i;
+                fprintf(stderr, "sync correction: -%i (%i->%i)\n", i, slen + i, slen);
+                memcpy((void *)src, &src[i], slen);
+                goto synced;
+            }
+        }
 
+        fprintf(stderr, "sync not corrected: trashing %i bytes\n", i);
+        goto done;
+    }
+
+    synced:
     for (i = 1, j = 0; i < slen; i++) {
         b = src[i];
 

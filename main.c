@@ -582,16 +582,16 @@ static void *osc_tx_thread(void *param)
             continue;
         }
 
-        src = (u64)qmsg->src.addr[0] |
-                ((u64)qmsg->src.addr[1] << (8*1)) |
-                ((u64)qmsg->src.addr[2] << (8*2)) |
-                ((u64)qmsg->src.addr[3] << (8*3)) |
-                ((u64)qmsg->src.addr[4] << (8*4)) |
-                ((u64)qmsg->src.addr[5] << (8*5)) |
-                ((u64)qmsg->src.addr[6] << (8*6)) |
-                ((u64)qmsg->src.addr[7] << (8*7));
+        src = (u64)qmsg->src.addr[7] |
+                ((u64)qmsg->src.addr[6] << (8*1)) |
+                ((u64)qmsg->src.addr[5] << (8*2)) |
+                ((u64)qmsg->src.addr[4] << (8*3)) |
+                ((u64)qmsg->src.addr[3] << (8*4)) |
+                ((u64)qmsg->src.addr[2] << (8*5)) |
+                ((u64)qmsg->src.addr[1] << (8*6)) |
+                ((u64)qmsg->src.addr[0] << (8*7));
 
-        sprintf(osc_addr, "/gesture/%08lX", src);
+        sprintf(osc_addr, "/gesture/xbee/%016lX", src);
         len_buf = qmsg->hdr.len - (int)sizeof(*qmsg);
         osc_data[0] = '\0';
         for (i = 0; i < len_buf; i++) {

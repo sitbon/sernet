@@ -48,6 +48,8 @@ const static pkt_addr_t PKT_ADDR_NONE;
 
 static addr_cache_t addr_cache[MAX_ADDR_CACHE];
 static dedup_t dedup[MAX_DEDUP];
+static u8 dedup_len;
+static u8 dedup_rc;
 
 static void *queue_rx_thread(void *param);
 static void *queue_tx_thread(void *param);
@@ -129,16 +131,16 @@ static void *queue_rx_thread(void *param)
         switch (msg->hdr.type) {
             case MSG_TYPE_PKT:
                 if (msg->hdr.len < sizeof(pkt_msg_t)) {
-                    fprintf(stderr, "udp rx: len=%i min=%i\n", len, sizeof(pkt_msg_t));
+                    fprintf(stderr, "udp rx: len=%i min=%li\n", len, sizeof(pkt_msg_t));
                     continue;
                 }
 
                 src = ((pkt_msg_t *)msg)->src;
-                seq = ((pkt_msg_t *)msg)->data[1];
+                seq = ((pkt_msg_t *)msg)->data[1]; // TODO: Identify air packet and correct seq index
                 break;
             case MSG_TYPE_RELAY:
                 if (msg->hdr.len < sizeof(relay_msg_t)) {
-                    fprintf(stderr, "udp rx: len=%i min=%i\n", len, sizeof(relay_msg_t));
+                    fprintf(stderr, "udp rx: len=%i min=%li\n", len, sizeof(relay_msg_t));
                     continue;
                 }
 
@@ -151,24 +153,34 @@ static void *queue_rx_thread(void *param)
         }
 
         clock_gettime(CLOCK_MONOTONIC_COARSE, &ts);
+        //fprintf(stderr, "seq=%i t = %lu/%lu\n", seq, ts.tv_sec, ts.tv_nsec);
 
-        for (i = 0; i < MAX_DEDUP; i++) {
-            if (!memcmp(&src, &dedup[i], sizeof(src))) {
+        for (i = 0; i < dedup_len; i++) {
+            if (!memcmp(&src, &dedup[i].src, sizeof(src))) {
+                if (!dedup[i].stm[seq].tv_sec) {
+                    dedup[i].stm[seq] = ts;
+                    break;
+                }
+
                 ts_diff(&tsd, &dedup[i].stm[seq], &ts);
                 dedup[i].stm[seq] = ts;
-                if (tsd.tv_sec > 0 || tsd.tv_nsec > 300000000) goto recv;
+
+                if (!tsd.tv_sec && tsd.tv_nsec <= 80000000) {
+                    fprintf(stderr, "diff %lu/%lu\n", tsd.tv_sec, tsd.tv_nsec);
+                    goto recv;
+                }
                 break;
             }
         }
 
-        if (i == MAX_DEDUP) {
-            for (i = 0; i < MAX_DEDUP; i++) {
-                if (!memcmp(&dedup[i], &PKT_ADDR_NONE, sizeof(src))) {
-                    dedup[i].src = src;
-                    dedup[i].stm[seq] = ts;
-                    break;
-                }
+        if (i == dedup_len) {
+            if (++dedup_len >= MAX_DEDUP) {
+                dedup_len--;
+                i = dedup_rc++;
+                memset(&dedup[i].stm, 0, sizeof(dedup[i].stm));
             }
+            dedup[i].src = src;
+            dedup[i].stm[seq] = ts;
         }
 
         //putchar('-'); fflush(stdout);
