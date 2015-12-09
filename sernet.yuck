@@ -27,3 +27,18 @@ Send packets on serial port and time network response.
   -s, --size=SIZE      Packet size per write.
   -d, --delay=MSEC     Delay between packets.
   -l, --listen=IFACE   Listen on interface IFACE.
+
+
+Usage: sernet dmp
+
+Dump packets from unix socket.
+
+  -S, --sock=SOCKET    UNIX socket name.
+
+
+Usage: sernet osc
+
+Pass packets from unix socket to osc.
+
+  -S, --sock=SOCKET    UNIX socket name.
+  -h, --host=HOST      Remote host to forward to.

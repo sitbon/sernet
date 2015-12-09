@@ -61,4 +61,30 @@ static inline void set_thread_prio(bool max)
     pthread_setschedparam(pthread_self(), SCHED_FIFO, &sched);
 }
 
+static inline u64 htonll(u64 in)
+{
+    union {
+        u64 num;
+        u8  bytes[8];
+    } dst, src = { .num = in };
+
+    for (int i = 0; i < 8; i++)
+        dst.bytes[i] = src.bytes[7-i];
+
+    return src.num;
+}
+
+static inline u64 ntohll(u64 in)
+{
+    union {
+        u64 num;
+        u8  bytes[8];
+    } dst, src = { .num = in };
+
+    for (int i = 0; i < 8; i++)
+        dst.bytes[i] = src.bytes[7-i];
+
+    return dst.num;
+}
+
 #endif

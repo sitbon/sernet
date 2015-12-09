@@ -271,15 +271,13 @@ static void handle_packet(int fd, const struct sockaddr_un *addr, pkt_msg_t *msg
 {
     ssize_t len;
 
-    // TOOD: filter dups
-
     retry:
-    len = send(fd, msg, msg->hdr.len, MSG_NOSIGNAL | MSG_WAITALL);//write(fd, msg, msg->hdr.len);
+    len = send(fd, msg, msg->hdr.len, MSG_NOSIGNAL | MSG_WAITALL/*, (struct sockaddr *)addr, sizeof(*addr)*/);//write(fd, msg, msg->hdr.len);
 
     if (len < msg->hdr.len) {
         if (len < 0) {
             if (errno == EINTR) goto retry;
-            perror("write");
+            perror("send");
         } else
             fprintf(stderr, "unix tx: len=%li exp=%u\n", len, msg->hdr.len);
         return;

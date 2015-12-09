@@ -14,10 +14,12 @@ enum yuck_cmds_e {
 	SERNET_CMD_FWD,
 	SERNET_CMD_DST,
 	SERNET_CMD_SRC,
+	SERNET_CMD_DMP,
+	SERNET_CMD_OSC,
 	
 	/* convenience identifiers */
 	YUCK_NOCMD = SERNET_CMD_NONE,
-	YUCK_NCMDS = SERNET_CMD_SRC
+	YUCK_NCMDS = SERNET_CMD_OSC
 };
 
 
@@ -77,6 +79,39 @@ struct yuck_cmd_src_s {
 	char *listen_arg;
 };
 
+/* convenience structure for `dmp' */
+struct yuck_cmd_dmp_s {
+	enum yuck_cmds_e cmd;
+
+	/* left-over arguments, the command string is never a part of this */
+	size_t nargs;
+	char **args;
+
+	/* help is handled automatically */
+	/* version is handled automatically */
+	char *rate_arg;
+	char *port_arg;
+
+	char *sock_arg;
+};
+
+/* convenience structure for `osc' */
+struct yuck_cmd_osc_s {
+	enum yuck_cmds_e cmd;
+
+	/* left-over arguments, the command string is never a part of this */
+	size_t nargs;
+	char **args;
+
+	/* help is handled automatically */
+	/* version is handled automatically */
+	char *rate_arg;
+	char *port_arg;
+
+	char *sock_arg;
+	char *host_arg;
+};
+
 
 union yuck_u {
 	/* generic struct */
@@ -100,6 +135,8 @@ union yuck_u {
 	struct yuck_cmd_fwd_s fwd;
 	struct yuck_cmd_dst_s dst;
 	struct yuck_cmd_src_s src;
+	struct yuck_cmd_dmp_s dmp;
+	struct yuck_cmd_osc_s osc;
 };
 
 
@@ -182,6 +219,10 @@ static enum yuck_cmds_e yuck_parse_cmd(const char *cmd)
 		return SERNET_CMD_DST;
 	} else if (yuck_streqp(cmd, "src")) {
 		return SERNET_CMD_SRC;
+	} else if (yuck_streqp(cmd, "dmp")) {
+		return SERNET_CMD_DMP;
+	} else if (yuck_streqp(cmd, "osc")) {
+		return SERNET_CMD_OSC;
 	} else {
 		/* error here? */
 		fprintf(stderr, "sernet: invalid command `%s'\n\
@@ -275,6 +316,12 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 		case SERNET_CMD_SRC:
 			goto SERNET_CMD_SRC_longopt; back_from_SERNET_CMD_SRC_longopt:;
 			break;
+		case SERNET_CMD_DMP:
+			goto SERNET_CMD_DMP_longopt; back_from_SERNET_CMD_DMP_longopt:;
+			break;
+		case SERNET_CMD_OSC:
+			goto SERNET_CMD_OSC_longopt; back_from_SERNET_CMD_OSC_longopt:;
+			break;
 		}
 		goto back_from_longopt;
 
@@ -343,6 +390,30 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 			}
 			goto back_from_SERNET_CMD_SRC_longopt;
 		}
+		SERNET_CMD_DMP_longopt:
+		{
+			if (0) {
+				;
+			} else if (yuck_streqp(op, "sock")) {
+				tgt->dmp.sock_arg = arg ?: argv[++i];
+			} else {
+				goto SERNET_CMD_NONE_longopt;
+			}
+			goto back_from_SERNET_CMD_DMP_longopt;
+		}
+		SERNET_CMD_OSC_longopt:
+		{
+			if (0) {
+				;
+			} else if (yuck_streqp(op, "sock")) {
+				tgt->osc.sock_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "host")) {
+				tgt->osc.host_arg = arg ?: argv[++i];
+			} else {
+				goto SERNET_CMD_NONE_longopt;
+			}
+			goto back_from_SERNET_CMD_OSC_longopt;
+		}
 		
 	}
 
@@ -362,6 +433,12 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 			break;
 		case SERNET_CMD_SRC:
 			goto SERNET_CMD_SRC_shortopt; back_from_SERNET_CMD_SRC_shortopt:;
+			break;
+		case SERNET_CMD_DMP:
+			goto SERNET_CMD_DMP_shortopt; back_from_SERNET_CMD_DMP_shortopt:;
+			break;
+		case SERNET_CMD_OSC:
+			goto SERNET_CMD_OSC_shortopt; back_from_SERNET_CMD_OSC_shortopt:;
 			break;
 		}
 		goto back_from_shortopt;
@@ -485,6 +562,45 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 			}
 			goto back_from_SERNET_CMD_SRC_shortopt;
 		}
+		SERNET_CMD_DMP_shortopt:
+		{
+			switch (*op) {
+			default:
+				;
+				;
+				goto SERNET_CMD_NONE_shortopt;
+
+				
+			case 'S':
+				tgt->dmp.sock_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			}
+			goto back_from_SERNET_CMD_DMP_shortopt;
+		}
+		SERNET_CMD_OSC_shortopt:
+		{
+			switch (*op) {
+			default:
+				;
+				;
+				goto SERNET_CMD_NONE_shortopt;
+
+				
+			case 'S':
+				tgt->osc.sock_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			case 'h':
+				tgt->osc.host_arg = *arg
+					? (op += strlen(arg), arg)
+					: argv[++i];
+				break;
+			}
+			goto back_from_SERNET_CMD_OSC_shortopt;
+		}
 		
 	}
 
@@ -542,6 +658,13 @@ static void yuck_free(yuck_t tgt[static 1U])
 ;
 ;
 		break;
+	case SERNET_CMD_DMP:
+;
+		break;
+	case SERNET_CMD_OSC:
+;
+;
+		break;
 		break;
 	}
 	return;
@@ -577,6 +700,20 @@ Send packets on serial port and time network response.\n\
 ");
 		break;
 
+	case SERNET_CMD_DMP:
+		puts("Usage: sernet dmp [OPTION]...\n\
+\n\
+Dump packets from unix socket.\n\
+");
+		break;
+
+	case SERNET_CMD_OSC:
+		puts("Usage: sernet osc [OPTION]...\n\
+\n\
+Pass packets from unix socket to osc.\n\
+");
+		break;
+
 	}
 
 #if defined yuck_post_usage
@@ -595,6 +732,8 @@ static void yuck_auto_help(const yuck_t src[static 1U])
   fwd         Forward from serial port to network.\n\
   dst         Collect packets from network, filter, and send over unix socket.\n\
   src         Send packets on serial port and time network response.\n\
+  dmp         Dump packets from unix socket.\n\
+  osc         Pass packets from unix socket to osc.\n\
 ");
 	}
 
@@ -645,6 +784,21 @@ Command-specific options:\n\
   -s, --size=SIZE       Packet size per write.\n\
   -d, --delay=MSEC      Delay between packets.\n\
   -l, --listen=IFACE    Listen on interface IFACE.\n\
+");
+		break;
+
+	case SERNET_CMD_DMP:
+		puts("\
+Command-specific options:\n\
+  -S, --sock=SOCKET     UNIX socket name.\n\
+");
+		break;
+
+	case SERNET_CMD_OSC:
+		puts("\
+Command-specific options:\n\
+  -S, --sock=SOCKET     UNIX socket name.\n\
+  -h, --host=HOST       Remote host to forward to.\n\
 ");
 		break;
 
