@@ -136,7 +136,7 @@ static void *queue_rx_thread(void *param)
                 }
 
                 src = ((pkt_msg_t *)msg)->src;
-                seq = ((pkt_msg_t *)msg)->data[1]; // TODO: Identify air packet and correct seq index
+                seq = ((pkt_msg_t *)msg)->data[2]; // TODO: Identify air packet and correct seq index
                 break;
             case MSG_TYPE_RELAY:
                 if (msg->hdr.len < sizeof(relay_msg_t)) {
@@ -166,7 +166,10 @@ static void *queue_rx_thread(void *param)
                 dedup[i].stm[seq] = ts;
 
                 if (!tsd.tv_sec && tsd.tv_nsec <= 80000000) {
-                    fprintf(stderr, "diff %lu/%lu\n", tsd.tv_sec, tsd.tv_nsec);
+                    //TODO: in some cases with just one sender this is happening a lot even
+                    //      though no duplicates are sent and everything makes it back to the
+                    //      relay target.
+                    //fprintf(stderr, "diff %lu/%lu\n", tsd.tv_sec, tsd.tv_nsec);
                     goto recv;
                 }
                 break;
@@ -284,12 +287,12 @@ static void handle_packet(int fd, const struct sockaddr_un *addr, pkt_msg_t *msg
     ssize_t len;
 
     retry:
-    len = send(fd, msg, msg->hdr.len, MSG_NOSIGNAL | MSG_WAITALL/*, (struct sockaddr *)addr, sizeof(*addr)*/);//write(fd, msg, msg->hdr.len);
+    len = sendto(fd, msg, msg->hdr.len, MSG_NOSIGNAL | MSG_WAITALL, (struct sockaddr *)addr, sizeof(*addr));//write(fd, msg, msg->hdr.len);
 
     if (len < msg->hdr.len) {
         if (len < 0) {
             if (errno == EINTR) goto retry;
-            perror("send");
+            perror("sendto");
         } else
             fprintf(stderr, "unix tx: len=%li exp=%u\n", len, msg->hdr.len);
         return;

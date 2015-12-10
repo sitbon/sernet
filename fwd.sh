@@ -1,7 +1,7 @@
 #!/bin/bash
 d=$(dirname $(readlink -f $0))
 sernet="$d/build/sernet"
-params="fwd -h nu3 $@"
+params="fwd $@"
 declare -a pids
 declare -a fifos
 fifoi=0
@@ -63,6 +63,7 @@ for cmd in "${cmds[@]}"; do
     fi
     fifof=".fifo${fifoi}"
     fifoi=$((fifoi+1))
+    rm -f $fifof
     mkfifo $fifof
     fifos=( ${fifos[@]} "$fifof" )
     cat "$fifof" | $ex &
