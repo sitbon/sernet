@@ -34,13 +34,12 @@ void udp_close(int fd)
 
 int udp_addr(struct addrinfo **addr, const char *host, const char *service, bool passive)
 {
-    struct addrinfo hints;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;//AF_UNSPEC;
-    hints.ai_socktype = SOCK_DGRAM;
-    hints.ai_protocol = IPPROTO_UDP;// 0;
-    hints.ai_flags = AI_ADDRCONFIG;
+    struct addrinfo hints = {
+            .ai_family = AF_INET,
+            .ai_socktype = SOCK_DGRAM,
+            .ai_protocol = IPPROTO_UDP,
+            .ai_flags = AI_ADDRCONFIG
+    };
 
     if (passive) hints.ai_flags |= AI_PASSIVE;
 

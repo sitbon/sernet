@@ -1,12 +1,14 @@
-#!/bin/bash
+#!/bin/bash -i
+d=$(dirname $(readlink -f $0))
+
 run_or_reset=0
 only_if_running=0
 no_attach=0
 exists=0
 
-pane1="./fwd.sh"
-pane2="./osc.sh"
-pane3="./build/sernet dst"
+pane1="$d/fwd.sh"
+pane2="$d/osc.sh"
+pane3="$d/build/sernet dst"
 
 for arg; do
     if [[ "$arg" == "-r" ]]; then

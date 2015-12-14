@@ -7,12 +7,24 @@ declare -a fifos
 fifoi=0
 stdio_labels=0
 
-cmds=(
-    "-i /dev/ttyUSB0"
-    "-i /dev/ttyUSB1"
-    "-i /dev/ttyUSB2"
-    "-i /dev/ttyUSB3"
-)
+name=$(hostname)
+
+if [ "$name" == "nu5" ]; then
+    cmds=(
+        "-i /dev/ttyUSB0"
+        "-i /dev/ttyUSB1"
+        "-i /dev/ttyUSB2"
+        "-i /dev/ttyUSB3"
+        "-i /dev/ttyUSB4"
+        "-i /dev/ttyUSB5"
+    )
+else
+    cmds=(
+        "-i /dev/ttyUSB0"
+        "-i /dev/ttyUSB1"
+        "-i /dev/ttyUSB2"
+    )
+fi
 
 function write_fifos_wait() {
     for ((i = 0; i < ${#fifos[@]}; i++)); do
