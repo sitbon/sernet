@@ -1,7 +1,8 @@
 #!/bin/bash
 d=$(dirname $(readlink -f $0))
-sernet="$d/build/sernet"
-params="fwd -h 10.1.0.139 -p 8000 $@"
+sernet="sudo $d/build/sernet"
+#params="fwd -h 10.1.0.139 -p 8000 $@"
+params="fwd -h 10.1.0.255 -p 8000 $@"
 declare -a pids
 declare -a fifos
 fifoi=0
