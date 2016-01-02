@@ -43,6 +43,7 @@ struct yuck_cmd_fwd_s {
 
 	char *input_arg;
 	char *host_arg;
+	unsigned int broadcast_flag;
 };
 
 /* convenience structure for `dst' */
@@ -365,6 +366,8 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				tgt->fwd.input_arg = arg ?: argv[++i];
 			} else if (yuck_streqp(op, "host")) {
 				tgt->fwd.host_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "broadcast")) {
+				tgt->fwd.broadcast_flag++;
 			} else {
 				goto SERNET_CMD_NONE_longopt;
 			}
@@ -521,6 +524,9 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 					? (op += strlen(arg), arg)
 					: argv[++i];
 				break;
+			case 'b':
+				tgt->fwd.broadcast_flag++;
+				break;
 			}
 			goto back_from_SERNET_CMD_FWD_shortopt;
 		}
@@ -660,6 +666,7 @@ static void yuck_free(yuck_t tgt[static 1U])
 	case SERNET_CMD_FWD:
 ;
 ;
+;
 		break;
 	case SERNET_CMD_DST:
 ;
@@ -781,6 +788,7 @@ Common options:\n\
 Command-specific options:\n\
   -i, --input=FILE      Input serial device file.\n\
   -h, --host=HOST       Remote host to forward to.\n\
+  -b, --broadcast       Enable USP broadcast.\n\
 ");
 		break;
 

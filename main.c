@@ -199,6 +199,14 @@ static void main_fwd(yuck_t *argp)
         exit(-1);
     }*/
 
+    if (argp->fwd.broadcast_flag) {
+        int opt = 1;
+        if (setsockopt(fd_sock_out, SOL_SOCKET, SO_BROADCAST, (void *) &opt,sizeof(opt)) < 0){
+            perror("setsockopt(SO_BROADCAST)");
+            exit(1);
+        }
+    }
+
     fd_uart_in = serial_open(argp->fwd.input_arg);
     if (fd_uart_in == -1) exit(-1);
     if (serial_setup(fd_uart_in, cfg.speed, 0, -1)) exit(-1);
