@@ -290,7 +290,7 @@ static void main_src(yuck_t *argp)
         if (argp->src.listen_arg && strcmp(argp->src.listen_arg, addr->ifa_name)) goto next;
 
         const in_addr_t in_addr = ntohl(((struct sockaddr_in *)addr->ifa_addr)->sin_addr.s_addr);
-        if (in_addr == INADDR_LOOPBACK || in_addr == INADDR_NONE || in_addr == INADDR_ANY) goto next;
+        if (in_addr == INADDR_NONE || in_addr == INADDR_ANY) goto next;
 
         param.addr_listen = *(struct sockaddr_in *)addr->ifa_addr;
         break;

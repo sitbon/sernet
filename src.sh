@@ -1,15 +1,15 @@
 #!/bin/bash
 d=$(dirname $(readlink -f $0))
 sernet="$d/build/sernet"
-params="src -d 100 -s 48 -l eth0 $@"
+params="src -d 100 -s 48 -l lo $@"
 declare -a pids
 declare -a fifos
 fifoi=0
 stdio_labels=0
 
 cmds=(
-    "-o /dev/ttyUSB0"
-#    "-o /dev/ttyUSB1"
+#    "-o /dev/ttyUSB0"
+    "-o /dev/ttyUSB1"
 #    "-o /dev/ttyUSB2"
 #    "-o /dev/ttyUSB3"
 #    "-o /dev/ttyUSB4"
