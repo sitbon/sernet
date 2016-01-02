@@ -105,7 +105,7 @@ static void *queue_rx_thread(void *param)
 
             if (rlen <= 0) {
                 if (errno == EINTR) continue;
-                fprintf(stderr, "uart rx: rlen=%li len=%li\n", rlen, len);
+                fprintf(stderr, "read(%s) = %li\t\t[l:%li]\t[e:%i] %s\n", p->path_rx, rlen, len, errno, strerror(errno));
                 goto done;
             }
 

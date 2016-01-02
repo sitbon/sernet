@@ -209,6 +209,7 @@ static void main_fwd(yuck_t *argp)
     );
 
     fwd_param_t param = {
+            .path_rx = argp->fwd.input_arg,
             .fd_rx = fd_uart_in,
             .fd_tx = fd_sock_out,
             .addr = baddr,
