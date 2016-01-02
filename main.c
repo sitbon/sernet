@@ -211,7 +211,8 @@ static void main_fwd(yuck_t *argp)
     fwd_param_t param = {
             .fd_rx = fd_uart_in,
             .fd_tx = fd_sock_out,
-            .addr = baddr
+            .addr = baddr,
+            .verbose = argp->verbose_flag != 0
     };
 
     fwd_start(&param);

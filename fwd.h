@@ -8,6 +8,7 @@ typedef struct {
     int                 fd_rx;
     int                 fd_tx;
     struct sockaddr_in  addr;
+    bool                verbose;
 } fwd_param_t;
 
 void fwd_start(fwd_param_t *p);

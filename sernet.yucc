@@ -39,6 +39,7 @@ struct yuck_cmd_fwd_s {
 	/* version is handled automatically */
 	char *rate_arg;
 	char *port_arg;
+	unsigned int verbose_flag;
 
 	char *input_arg;
 	char *host_arg;
@@ -56,6 +57,7 @@ struct yuck_cmd_dst_s {
 	/* version is handled automatically */
 	char *rate_arg;
 	char *port_arg;
+	unsigned int verbose_flag;
 
 	char *sock_arg;
 };
@@ -72,6 +74,7 @@ struct yuck_cmd_src_s {
 	/* version is handled automatically */
 	char *rate_arg;
 	char *port_arg;
+	unsigned int verbose_flag;
 
 	char *output_arg;
 	char *size_arg;
@@ -91,6 +94,7 @@ struct yuck_cmd_dmp_s {
 	/* version is handled automatically */
 	char *rate_arg;
 	char *port_arg;
+	unsigned int verbose_flag;
 
 	char *sock_arg;
 };
@@ -107,6 +111,7 @@ struct yuck_cmd_osc_s {
 	/* version is handled automatically */
 	char *rate_arg;
 	char *port_arg;
+	unsigned int verbose_flag;
 
 	char *sock_arg;
 	char *host_arg;
@@ -128,6 +133,7 @@ union yuck_u {
 		/* version is handled automatically */
 		char *rate_arg;
 		char *port_arg;
+		unsigned int verbose_flag;
 	};
 
 	/* depending on CMD at most one of the following structs is filled in
@@ -342,6 +348,8 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				tgt->rate_arg = arg ?: argv[++i];
 			} else if (yuck_streqp(op, "port")) {
 				tgt->port_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "verbose")) {
+				tgt->verbose_flag++;
 			} else {
 				/* grml */
 				fprintf(stderr, "sernet: unrecognized option `--%s'\n", op);
@@ -487,6 +495,9 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				tgt->port_arg = *arg
 					? (op += strlen(arg), arg)
 					: argv[++i];
+				break;
+			case 'v':
+				tgt->verbose_flag++;
 				break;
 			}
 			goto back_from_SERNET_CMD_NONE_shortopt;
@@ -644,6 +655,7 @@ static void yuck_free(yuck_t tgt[static 1U])
 ;
 ;
 ;
+;
 		break;
 	case SERNET_CMD_FWD:
 ;
@@ -748,6 +760,7 @@ Common options:\n\
   -V, --version         output version information and exit\n\
   -r, --rate=RATE       Serial baud rate.\n\
   -p, --port=PORT       Connect or listen on port PORT.\n\
+  -v, --verbose         Print extra info.\n\
 ");
 	}
 
@@ -759,6 +772,7 @@ Common options:\n\
   -V, --version         output version information and exit\n\
   -r, --rate=RATE       Serial baud rate.\n\
   -p, --port=PORT       Connect or listen on port PORT.\n\
+  -v, --verbose         Print extra info.\n\
 ");
 		break;
 

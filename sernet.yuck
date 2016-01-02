@@ -2,6 +2,7 @@ Usage: sernet
 
   -r, --rate=RATE      Serial baud rate.
   -p, --port=PORT      Connect or listen on port PORT.
+  -v, --verbose        Print extra info.
 
 
 Usage: sernet fwd

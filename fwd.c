@@ -120,7 +120,8 @@ static void *queue_rx_thread(void *param)
 
         //putchar('-'); fflush(stdout);
         //printf("-%i", pkt->hdr.len); fflush(stdout);
-        //print_hex(stderr, pkt, pkt->hdr.len);
+
+        if (p->verbose) print_hex(stderr, (u8 *)pkt, pkt->hdr.len);
 
         /*const u64 addr =
                 (u64)((rx_pkt_t *)pkt)->src.addr[0] |
