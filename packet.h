@@ -59,7 +59,7 @@ typedef struct __attribute__((packed)) {
     pkt_data_t  data[];
 } rx_pkt_t;
 
-pkt_len_t pkt_decode(const void *src, pkt_len_t len, pkt_t *dst);
+pkt_len_t pkt_decode(const char *path, const void *src, pkt_len_t len, pkt_t *dst);
 pkt_len_t pkt_encode(const pkt_t *src, void *dst);
 
 #endif

@@ -15,7 +15,7 @@
 
 #define FRAME_LEN_MIN                 (pkt_len_t)4
 
-static pkt_len_t frame_decode(const buf_t *src, buf_t *dst, pkt_len_t *len)
+static pkt_len_t frame_decode(const char *path, const buf_t *src, buf_t *dst, pkt_len_t *len)
 {
     pkt_len_t slen = *len, plen = 0, i = 0, j;
     u16 fcs = 0;
@@ -29,13 +29,13 @@ static pkt_len_t frame_decode(const buf_t *src, buf_t *dst, pkt_len_t *len)
         for (i = 1; i < slen; i++) {
             if (src[i] == FRAME_BYTE_SYNC) {
                 slen -= i;
-                fprintf(stderr, "sync correction: -%i (%i->%i)\n", i, slen + i, slen);
+                fprintf(stderr, "[%s]\tsync correction: -%i (%i->%i)\n", path, i, slen + i, slen);
                 memcpy((void *)src, &src[i], slen);
                 goto synced;
             }
         }
 
-        fprintf(stderr, "sync not corrected: trashing %i bytes\n", i);
+        fprintf(stderr, "[%s]\tsync not corrected: trashing %i bytes\n", path, i);
         goto done;
     }
 
@@ -129,10 +129,10 @@ static pkt_len_t frame_encode(const buf_t *src, pkt_len_t len, buf_t *dst)
     return clen;
 }
 
-pkt_len_t pkt_decode(const void *src, pkt_len_t len, pkt_t *dst)
+pkt_len_t pkt_decode(const char *path, const void *src, pkt_len_t len, pkt_t *dst)
 {
     dst->hdr.len = len;
-    const pkt_len_t res = frame_decode(src, dst->hdr.raw, &dst->hdr.len);
+    const pkt_len_t res = frame_decode(path, src, dst->hdr.raw, &dst->hdr.len);
 
     if (res > 0 && res <= len && dst->hdr.len > 0) {
         dst->hdr.len += sizeof(pkt_len_t);
@@ -151,7 +151,7 @@ pkt_len_t pkt_decode(const void *src, pkt_len_t len, pkt_t *dst)
         }
 
         if (dst->hdr.len < tlen) {
-            fprintf(stderr, "uart rx underflow: len=%i need>=%i\n", dst->hdr.len, tlen);
+            fprintf(stderr, "[%s]\tuart rx underflow: len=%i need>=%i\n", path, dst->hdr.len, tlen);
             dst->hdr.len = 0;
         }
     }
