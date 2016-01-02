@@ -99,19 +99,24 @@ static void *queue_rx_thread(void *param)
 
     while (1) {
         while (true) {
+            if (len >= UART_MAX_LEN) {
+                fprintf(stderr, "[%s]\tsync overflow (%li)\n", p->path_rx, len);
+                len = 0;
+            }
+
             rlen = read(fd, &((u8 *)buf)[len], UART_MAX_LEN - (size_t)len);
             //printf("<%li>", rlen); fflush(stdout);
             //print_hex(stdout, &((u8 *)buf)[len], (u32)rlen);
 
             if (rlen <= 0) {
                 if (errno == EINTR) continue;
-                fprintf(stderr, "read(%s) = %li\t\t[l:%li]\t[e:%i] %s\n", p->path_rx, rlen, len, errno, strerror(errno));
+                fprintf(stderr, "[%s]\tread(%li)=%li\t[l:%li]\t[e:%i] %s\n", p->path_rx, UART_MAX_LEN - (size_t)len, rlen, len, errno, strerror(errno));
                 goto done;
             }
 
             len += rlen;
-            if ((rlen = pkt_decode(buf, (pkt_len_t)len, pkt)) == PKT_ERROR) goto done;
-            //printf("[%li, %li]", len, rlen); fflush(stdout);
+            if ((rlen = pkt_decode(p->path_rx, buf, (pkt_len_t)len, pkt)) == PKT_ERROR) goto done;
+            //fprintf(stderr, "[%s]\t[%li, %li]\n", p->path_rx, len, rlen);
             if (rlen && (len - rlen)) memcpy(buf, &((u8 *)buf)[rlen], (size_t)(len - rlen));
             len -= rlen;
 
@@ -121,7 +126,10 @@ static void *queue_rx_thread(void *param)
         //putchar('-'); fflush(stdout);
         //printf("-%i", pkt->hdr.len); fflush(stdout);
 
-        if (p->verbose) print_hex(stderr, (u8 *)pkt, pkt->hdr.len);
+        if (p->verbose) {
+            fprintf(stderr, "[%s]\t<%u>\n", p->path_rx, pkt->hdr.len);
+            //print_hex(stderr, (u8 *)pkt, pkt->hdr.len);
+        }
 
         /*const u64 addr =
                 (u64)((rx_pkt_t *)pkt)->src.addr[0] |
