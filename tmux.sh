@@ -7,8 +7,6 @@ no_attach=0
 exists=0
 
 pane1="$d/fwd.sh"
-pane2="$d/osc.sh"
-pane3="$d/build/sernet dst"
 
 for arg; do
     if [[ "$arg" == "-r" ]]; then
@@ -52,47 +50,6 @@ if (( $run_or_reset )); then
 
     #tmux send-keys C-l "echo fwd $exists" C-m C-l
     tmux send-keys C-l "$pane1" C-m
-fi
-
-if ! (( $exists )); then
-    tmux splitw -v -p 50
-else
-    tmux selectp -t 3
-    sleep 0.005
-
-    if (( $run_or_reset )); then
-        tmux send-keys C-m
-        sleep 0.5
-        tmux send-keys C-m C-c C-l C-m
-    fi
-fi
-
-sleep 0.005
-
-if (( $run_or_reset )); then
-    #tmux send-keys C-l "echo dmp $exists" C-m C-l
-    tmux send-keys C-l "$pane2" C-m
-fi
-
-tmux selectp -t 1
-sleep 0.005
-
-if ! (( $exists )); then
-    tmux splitw -h -p 50
-else
-    tmux selectp -t 2
-    sleep 0.005
-
-    if (( $run_or_reset )); then
-        tmux send-keys C-m
-        sleep 0.5
-        tmux send-keys C-m C-c C-l C-m
-    fi
-fi
-
-if (( $run_or_reset )); then
-    #tmux send-keys C-l "echo dst $exists" C-m C-l
-    tmux send-keys C-l "$pane3" C-m
 fi
 
 if ! (( $no_attach )); then
