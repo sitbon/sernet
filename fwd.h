@@ -5,6 +5,7 @@
 #include "udp.h"
 
 typedef struct {
+    char                *path_rx;
     int                 fd_rx;
     int                 fd_tx;
     struct sockaddr_in  addr;
