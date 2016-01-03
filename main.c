@@ -158,6 +158,7 @@ static void main_dst(yuck_t *argp)
     param.fd_rx = fd_sock_in;
     param.fd_tx_in = fd_sock_in;
     param.fd_tx_un = fd_sock_out;
+    param.verbose = argp->verbose_flag != 0;
 
     dst_start(&param);
     while (getchar() != '\n');
@@ -280,6 +281,18 @@ static void main_src(yuck_t *argp)
         param.delay_ns = delay_ns;
     }
 
+    long port = strtol(argp->src.port_arg, &pterm, 10);
+
+    if (errno || *pterm || port < 0 || port > UINT16_MAX) {
+        if (errno) {
+            perror("strtol");
+            exit(1);
+        } else {
+            fprintf(stderr, "invalid port %s\n", argp->src.port_arg);
+            exit(1);
+        }
+    }
+
     struct ifaddrs *addr;
 
     if (getifaddrs(&addr)) {
@@ -308,6 +321,8 @@ static void main_src(yuck_t *argp)
 
     fd_sock_in = udp_open(param.addr_listen.sin_family);
     if (fd_sock_in == -1) exit(-1);
+
+    param.addr_listen.sin_port = htons((u16)port);
 
     if (udp_bind(fd_sock_in, (struct sockaddr *)&param.addr_listen, sizeof(param.addr_listen))) exit(-1);
 

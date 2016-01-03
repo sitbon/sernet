@@ -8,8 +8,8 @@ fifoi=0
 stdio_labels=0
 
 cmds=(
-    "-o /dev/ttyUSB0"
-#    "-o /dev/ttyUSB1"
+    "-p 59524 -o /dev/ttyUSB0"
+    "-p 59525 -o /dev/ttyUSB1"
 #    "-o /dev/ttyUSB2"
 #    "-o /dev/ttyUSB3"
 #    "-o /dev/ttyUSB4"

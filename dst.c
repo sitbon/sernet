@@ -53,8 +53,8 @@ static u8 dedup_rc;
 
 static void *queue_rx_thread(void *param);
 static void *queue_tx_thread(void *param);
-static void handle_relay(int fd, relay_msg_t *msg);
-static void handle_packet(int fd, const struct sockaddr_un *addr, pkt_msg_t *msg);
+static void handle_relay(const dst_param_t *dst, int fd, relay_msg_t *msg);
+static void handle_packet(const dst_param_t *dst, int fd, const struct sockaddr_un *addr, pkt_msg_t *msg);
 
 
 static struct sockaddr_in *get_addr(u32 addr, u16 port)
@@ -155,6 +155,7 @@ static void *queue_rx_thread(void *param)
         clock_gettime(CLOCK_MONOTONIC_COARSE, &ts);
         //fprintf(stderr, "seq=%i t = %lu/%lu\n", seq, ts.tv_sec, ts.tv_nsec);
 
+#ifdef SERNET_DST_DEDUP
         for (i = 0; i < dedup_len; i++) {
             if (!memcmp(&src, &dedup[i].src, sizeof(src))) {
                 if (!dedup[i].stm[seq].tv_sec) {
@@ -185,6 +186,7 @@ static void *queue_rx_thread(void *param)
             dedup[i].src = src;
             dedup[i].stm[seq] = ts;
         }
+#endif
 
         //putchar('-'); fflush(stdout);
         //printf("-%i", msg->hdr.len);
@@ -238,10 +240,10 @@ static void *queue_tx_thread(void *param)
 
         switch (qmsg->hdr.type) {
             case MSG_TYPE_RELAY:
-                handle_relay(fd_in, (relay_msg_t *)qmsg);
+                handle_relay(dst, fd_in, (relay_msg_t *)qmsg);
                 break;
             case MSG_TYPE_PKT:
-                handle_packet(fd_un, addr_un, (pkt_msg_t *)qmsg);
+                handle_packet(dst, fd_un, addr_un, (pkt_msg_t *)qmsg);
                 break;
         }
 
@@ -251,7 +253,7 @@ static void *queue_tx_thread(void *param)
     return NULL;
 }
 
-static void handle_relay(int fd, relay_msg_t *msg)
+static void handle_relay(const dst_param_t *dst, int fd, relay_msg_t *msg)
 {
     struct sockaddr_in *addr;
     ssize_t len;
@@ -270,6 +272,8 @@ static void handle_relay(int fd, relay_msg_t *msg)
         return;
     }
 
+    if (dst->verbose) fprintf(stderr, "[%08lX] <R:%u> -> %s:%u\n", msg->src, msg->hdr.len, inet_ntoa(addr->sin_addr), ntohs(msg->relay.port));
+
     retry:
     len = udp_send(fd, (struct sockaddr *)addr, sizeof(*addr), msg, msg->hdr.len);
 
@@ -282,9 +286,11 @@ static void handle_relay(int fd, relay_msg_t *msg)
     //putchar('^'); fflush(stdout);
 }
 
-static void handle_packet(int fd, const struct sockaddr_un *addr, pkt_msg_t *msg)
+static void handle_packet(const dst_param_t *dst, int fd, const struct sockaddr_un *addr, pkt_msg_t *msg)
 {
     ssize_t len;
+
+    if (dst->verbose) fprintf(stderr, "[%08lX] <P:%u>\n", msg->src, msg->hdr.len);
 
     retry:
     len = sendto(fd, msg, msg->hdr.len, MSG_NOSIGNAL | MSG_WAITALL, (struct sockaddr *)addr, sizeof(*addr));//write(fd, msg, msg->hdr.len);
