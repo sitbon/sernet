@@ -17,6 +17,7 @@ typedef struct {
     long delay_ns;
     struct sockaddr_in addr_listen;
     timing_t t_rtt;
+    bool simulate_rx;
 } src_param_t;
 
 void src_start(src_param_t *p);

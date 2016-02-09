@@ -38,10 +38,10 @@ static void main_osc(yuck_t *argp);
 static param_t cfg;
 
 static void print_src_info(yuck_t *argp, src_param_t *p, const char *suffix) {
-    printf("<src> %s@%s %s:%u %sb/%sms%s",
+    printf("<src> %s@%s %s:%u %sb/%sms%s%s",
             argp->src.output_arg, argp->rate_arg,
             inet_ntoa(p->addr_listen.sin_addr), ntohs(p->addr_listen.sin_port),
-            argp->src.size_arg, argp->src.delay_arg, suffix
+            argp->src.size_arg, argp->src.delay_arg, p->simulate_rx ? "/s" : "", suffix
     );
 }
 
@@ -337,10 +337,11 @@ static void main_src(yuck_t *argp)
     if (fd_uart_out == -1) exit(-1);
     if (serial_setup(fd_uart_out, cfg.speed, 0, -1)) exit(-1);
 
-    print_src_info(argp, &param, "\n");
-
     param.fd_tx = fd_uart_out;
     param.fd_rx = fd_sock_in;
+    param.simulate_rx = argp->src.simulate_flag ? true : false;
+
+    print_src_info(argp, &param, "\n");
 
     src_start(&param);
     while (getchar() != '\n');

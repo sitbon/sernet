@@ -28,6 +28,7 @@ Send packets on serial port and time network response.
   -s, --size=SIZE      Packet size per write.
   -d, --delay=MSEC     Delay between packets.
   -l, --listen=IFACE   Listen on interface IFACE.
+  --simulate           Simulate an API mode RX packet when sending.
 
 
 Usage: sernet dmp

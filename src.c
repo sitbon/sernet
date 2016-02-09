@@ -23,13 +23,18 @@ typedef struct {
 } src_t;
 
 static void *src_tx_thread(void *param);
+static void *src_tx_sim_thread(void *param);
 static void *src_rx_thread(void *param);
 
 static src_t src;
 
 void src_start(src_param_t *p)
 {
-    pthread_create(&src.thr_tx, NULL, src_tx_thread, (void *)p);
+    if (p->simulate_rx)
+        pthread_create(&src.thr_tx, NULL, src_tx_sim_thread, (void *)p);
+    else
+        pthread_create(&src.thr_tx, NULL, src_tx_thread, (void *)p);
+
     pthread_create(&src.thr_rx, NULL, src_rx_thread, (void *)p);
 }
 
@@ -85,7 +90,7 @@ static void *src_tx_thread(void *param)
 
 #ifdef SRC_XBEE_API_MODE
         pkt_len = pkt_encode((pkt_t *)pkt, buf);
-        print_hex(stdout, buf, pkt_len);
+        //print_hex(stdout, buf, pkt_len);
         len = 0;
 
         do {
@@ -99,8 +104,6 @@ static void *src_tx_thread(void *param)
 
             len += wlen;
         } while (len < pkt_len);
-        //putchar('-'); fflush(stdout);
-        //read(fd, buf, UART_MAX_LEN*2);
 #else
         pkt_len = sizeof(relay_pkt_data_t);
         len = 0;
@@ -116,15 +119,74 @@ static void *src_tx_thread(void *param)
 
             len += wlen;
         } while (len < pkt_len);
-        //putchar('-'); fflush(stdout);
-        //printf("-%li", len); fflush(stdout);
 #endif
+
         p->t_rtt.cnt_exp++;
         if (ts_delay.tv_nsec) nanosleep(&ts_delay, NULL);
     }
 
     return NULL;
 }
+
+static void *src_tx_sim_thread(void *param)
+{
+    src_param_t *const p = (src_param_t *)param;
+    const int fd = p->fd_tx;
+    pkt_len_t pkt_len = (pkt_len_t)sizeof(rx_pkt_t) + (pkt_len_t)p->pkt_len;
+    size_t len;
+    ssize_t wlen;
+    rx_pkt_t *const pkt = malloc(pkt_len);
+    relay_pkt_data_t *const relay_data = (relay_pkt_data_t *)pkt->data;
+    relay_t *const relay = &relay_data->relay;
+    pkt_data_t *const buf = malloc(UART_MAX_LEN*2);
+
+    const struct timespec ts_delay = {
+            .tv_sec = 0,
+            .tv_nsec = p->delay_ns
+    };
+
+    memset(pkt, 0, pkt_len);
+    pkt->hdr.len = (pkt_len_t)pkt_len;
+    pkt->hdr.type = PKT_TYPE_RX_IND;
+    pkt->rsv[0] = 0xff;
+    pkt->rsv[1] = 0xfe;
+    pkt->src.addr[4] = 0xff;
+    pkt->src.addr[5] = 0xff;
+    pkt->src.addr[6] = 0xff;
+    pkt->src.addr[7] = 0xff;
+    relay_data->magic = PKT_MAGIC_RELAY;
+    relay->src = p->addr_listen.sin_addr.s_addr;
+    relay->port = p->addr_listen.sin_port;
+
+    set_thread_prio(true);
+
+    while (1) {
+        clock_gettime(CLOCK_MONOTONIC, &relay->ts);
+        if (!++relay->seq) relay->seq++;
+
+        pkt_len = pkt_encode((pkt_t *)pkt, buf);
+        //print_hex(stdout, buf, pkt_len);
+        len = 0;
+
+        do {
+            wlen = write(fd, &((unsigned char *)buf)[len], pkt_len - len);
+
+            if (wlen <= 0) {
+                if (errno == EINTR) continue;
+                fprintf(stderr, "uart tx: wlen=%li len=%li exp=%i\n", wlen, len, pkt_len);
+                exit(-1);
+            }
+
+            len += wlen;
+        } while (len < pkt_len);
+
+        p->t_rtt.cnt_exp++;
+        if (ts_delay.tv_nsec) nanosleep(&ts_delay, NULL);
+    }
+
+    return NULL;
+}
+
 
 static void *src_rx_thread(void *param)
 {

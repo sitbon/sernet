@@ -80,6 +80,7 @@ struct yuck_cmd_src_s {
 	char *size_arg;
 	char *delay_arg;
 	char *listen_arg;
+	unsigned int simulate_flag;
 };
 
 /* convenience structure for `dmp' */
@@ -393,6 +394,8 @@ static int yuck_parse(yuck_t tgt[static 1U], int argc, char *argv[])
 				tgt->src.delay_arg = arg ?: argv[++i];
 			} else if (yuck_streqp(op, "listen")) {
 				tgt->src.listen_arg = arg ?: argv[++i];
+			} else if (yuck_streqp(op, "simulate")) {
+				tgt->src.simulate_flag++;
 			} else {
 				goto SERNET_CMD_NONE_longopt;
 			}
@@ -669,6 +672,7 @@ static void yuck_free(yuck_t tgt[static 1U])
 ;
 ;
 ;
+;
 		break;
 	case SERNET_CMD_DMP:
 ;
@@ -798,6 +802,7 @@ Command-specific options:\n\
   -s, --size=SIZE       Packet size per write.\n\
   -d, --delay=MSEC      Delay between packets.\n\
   -l, --listen=IFACE    Listen on interface IFACE.\n\
+      --simulate        Simulate an API mode RX packet when sending.\n\
 ");
 		break;
 
