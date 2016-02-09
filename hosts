@@ -1,13 +1,1 @@
-#nu2
-#nu3
-#nu4
-#nu5
-#nu6
-#nu7
-
-nu10
-nu11
-nu12
-nu13
-nu14
-nu15
+# Put hostnames here, one per line, to be used with deploy.sh
